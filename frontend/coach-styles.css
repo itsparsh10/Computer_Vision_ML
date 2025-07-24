@@ -1,0 +1,164 @@
+/* Presentation Coach Styles */
+.presentation-coach-container {
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.presentation-coach-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.presentation-coach-header .header-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6c5ce7, #4834d4);
+    color: white;
+    font-size: 1.5rem;
+    margin-right: 1rem;
+}
+
+.presentation-coach-header .header-content {
+    flex: 1;
+}
+
+.presentation-coach-header h3 {
+    margin: 0 0 0.3rem 0;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.presentation-coach-header p {
+    margin: 0;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #6c5ce7, #4834d4);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.coach-feedback-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 992px) {
+    .coach-feedback-content {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.coach-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.coach-card .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.coach-card .card-header h4 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.coach-card .card-header i {
+    color: #6c5ce7;
+}
+
+.coach-card .card-badge {
+    background-color: #f1f1f1;
+    color: #555;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.coach-card p {
+    color: #444;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.coach-card ul, 
+.coach-card ol {
+    padding-left: 1.2rem;
+    margin: 0;
+}
+
+.coach-card li {
+    margin-bottom: 0.8rem;
+    color: #444;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.coach-card li:last-child {
+    margin-bottom: 0;
+}
+
+.coach-card strong {
+    color: #333;
+    font-weight: 600;
+}
+
+.analysis-note {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    background-color: rgba(108, 92, 231, 0.1);
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #6c5ce7;
+}
+
+.analysis-note i {
+    color: #6c5ce7;
+    font-size: 1.2rem;
+    margin-right: 0.7rem;
+    margin-top: 0.2rem;
+}
+
+.analysis-note p {
+    margin: 0;
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}

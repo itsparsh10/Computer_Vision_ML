@@ -1,0 +1,656 @@
+FastAPI to Django Migration: Documentation
+
+## 1. Overview
+
+This document outlines the migration of the AI Video Transcriber application from a FastAPI-based backend to a more robust Django-based backend. The goal was to leverage Django's features for database management, static file serving, and project structure while retaining the core AI/ML processing logic.
+
+**Current Project Structure**: The application is now organized as a proper Django project with all core files in the root directory and app-specific files in the `app/` directory.
+
+---
+
+## 2. Removed and Replaced Components
+
+### Removed (FastAPI)
+
+1.  **`main.py`:** The primary file containing the FastAPI application instance, all API endpoint definitions (`@app.post`, `@app.get`), and the Uvicorn server startup logic has been completely removed.
+2.  **FastAPI Dependencies:** Python dependencies like `fastapi` and `uvicorn` are no longer required.
+3.  **In-Memory/Temporary File Handling:** The previous approach of handling file uploads directly in memory or saving them to a temporary, unstructured `uploads/` folder without a persistent record has been deprecated.
+4.  **FastAPI's `UploadFile`:** The specific data type and handling for file uploads from `fastapi` is no longer used.
+
+### Added/Replaced With (Django)
+
+1.  **Django Project Structure (Root Directory):**
+    *   `manage.py`: The command-line utility for interacting with the Django project (running the server, migrations, etc.).
+    *   `settings.py`: The central configuration file for the project, defining installed apps, database settings, and paths for static/media files.
+    *   `urls.py`: The main URL routing file for the project.
+    *   `wsgi.py` & `asgi.py`: Production server configuration files.
+    *   `main.py`: Custom entry point that initializes AI models and starts Django server.
+
+2.  **Django App (`app/`):**
+    *   `app/views.py`: Contains the logic for handling HTTP requests, replacing the FastAPI endpoint functions. Key views include `upload_video`, `health_check`.
+    *   `app/models.py`: Defines the database schema using Django's ORM. Models include `Upload`, `Transcript`, and `Analysis` for persistent data storage.
+    *   `app/urls.py`: App-specific URL routing, included in the main project's `urls.py`.
+    *   `app/transcriber.py`: VideoTranscriber class with enhanced FFmpeg detection.
+    *   `app/gemini.py`: GeminiProcessor class with improved error handling.
+    *   `app/text_analyzer.py`: TextAnalyzer class with extended emotion analysis.
+
+3.  **Database Integration:**
+    *   A SQLite database (`db.sqlite3`) is now used by default to store records of all uploads, their transcription status, and the results of the analysis.
+    *   Django migrations system manages database schema changes.
+
+4.  **Static and Media File Handling:**
+    *   `settings.py` is configured to handle `static/` files (CSS, JS from the `frontend/` directory) and `media/` files (user-uploaded videos/audios).
+    *   `templates/` directory contains Django templates served by views.
+    *   `frontend/` directory provides static assets.
+
+---
+
+## 3. New Application Flow
+
+The application flow is now managed by Django's request-response cycle:
+
+1.  **Start Server:** The developer runs `python3 main.py` or `python3 manage.py runserver`.
+2.  **User Access:** A user navigates to the root URL (`http://127.0.0.1:8000/`).
+3.  **Render Frontend:** Django's URL router maps the root URL to a view in the main `urls.py`. This view renders the `index.html` template from the `templates/` directory.
+4.  **Load Static Assets:** The browser requests the CSS and JavaScript files specified in `index.html`. Django's static file handler finds these files in the `frontend/` directory and serves them.
+5.  **File Upload:**
+    *   The user selects a file and clicks the upload button.
+    *   The frontend JavaScript sends a `POST` request with the file data to the `/upload-video/` API endpoint.
+    *   CSRF protection is handled through Django's middleware.
+6.  **Backend Processing:**
+    *   The `upload_video` view in `app/views.py` receives the request.
+    *   It saves the uploaded video to the `media/uploads/` directory.
+    *   A new record is created in the `Upload` table in the database, storing metadata about the file.
+    *   The view then triggers the core processing logic (transcription and analysis) by calling the classes in `transcriber.py`, `gemini.py`, and `text_analyzer.py`.
+7.  **Return Response:** The view returns a JSON response to the frontend, containing the transcription and analysis results.
+8.  **Display Results:** The frontend JavaScript receives the JSON response and dynamically updates the webpage to display the results to the user.
+
+---
+
+## 4. Core Logic and How It Works
+
+### File Upload and Models
+
+*   **Logic:** When a file is uploaded to the `/upload-video/` endpoint, the `upload_video` view in `views.py` now handles it. Instead of just saving the file, it creates a database record.
+*   **How it Works:**
+    1.  The file from `request.FILES['file']` is an `UploadedFile` object.
+    2.  A new `Upload` model instance is created: `upload_instance = Upload(file=request.FILES['file'])`.
+    3.  `upload_instance.save()` is called. Django's ORM automatically handles saving the file to the directory specified by `MEDIA_ROOT` in `settings.py` and stores its path in the database.
+    4.  This decouples the file from the request and links it to a persistent database record.
+
+### Serving the Frontend
+
+*   **Logic:** The frontend is no longer a separate static site but is integrated into and served by Django.
+*   **How it Works:**
+    1.  `settings.py` has `STATIC_URL = '/static/'` and `STATICFILES_DIRS = [os.path.join(BASE_DIR, 'frontend')]`.
+    2.  When `index.html` requests `<script src="/static/script.js">`, Django's server (in development) or a web server (in production) knows to look in the `frontend/` directory for `script.js`.
+    3.  The main `index.html` is rendered by a Django view, allowing for potential dynamic data injection in the future.
+
+### FFmpeg Dependency Check (`transcriber.py`)
+
+*   **Logic:** To improve reliability on Windows, the script now proactively searches for `ffmpeg.exe` in common locations if it's not in the system's PATH.
+*   **How it Works:**
+    1.  The `ensure_ffmpeg_available` function first uses `shutil.which('ffmpeg')` to check the PATH.
+    2.  If not found, it checks a predefined list of common installation directories, including standard `Program Files` and Windows App/WinGet paths.
+    3.  If found in one of these locations, the script dynamically adds the directory containing `ffmpeg.exe` to the `os.environ['PATH']` for the current session.
+    4.  This allows the `whisper` library's subsequent subprocess calls to find and execute `ffmpeg` without requiring a manual system environment variable configuration from the user.
+
+---
+
+# Installation and Setup Instructions
+
+This document provides detailed setup and execution instructions for the AI Video Transcriber application.
+
+## Prerequisites
+
+Before starting, ensure you have the following installed on your system:
+
+- **Python 3.9 or higher** (Python 3.11+ recommended)
+- **Git** (for cloning the repository)
+- **pip** (Python package installer, usually comes with Python)
+
+# 🪟 **WINDOWS INSTALLATION**
+
+## **Step 1: Download and Clone Repository**
+```cmd
+git clone <repository-url>
+cd "Video_Txt 5"
+```
+
+## **Step 2: Create Virtual Environment**
+```cmd
+python -m venv venv
+.\venv\Scripts\activate
+```
+**✅ Verify:** You should see `(venv)` in your command prompt
+
+## **Step 3: Install FFmpeg**
+**Option A - Using Winget (Recommended):**
+```cmd
+winget install Gyan.FFmpeg.Essentials
+```
+
+**Option B - Using Chocolatey:**
+```cmd
+choco install ffmpeg
+```
+
+**✅ Verify FFmpeg:**
+```cmd
+ffmpeg -version
+```
+
+## **Step 4: Install Python Packages**
+```cmd
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## **Step 5: Create Environment File**
+Create a file named `.env` in the project folder and add:
+```
+GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+DEBUG=True
+SECRET_KEY="your-secret-key-here"
+```
+
+## **Step 6: Setup Database**
+```cmd
+python manage.py migrate
+```
+
+## **Step 7: Run Application**
+```cmd
+python main.py
+```
+**✅ Open browser:** http://127.0.0.1:8000
+
+---
+
+# 🍎 **MAC INSTALLATION**
+
+## **Step 1: Download and Clone Repository**
+```bash
+git clone <repository-url>
+cd "Video_Txt 5"
+```
+
+## **Step 2: Create Virtual Environment**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+**✅ Verify:** You should see `(venv)` in your terminal prompt
+
+## **Step 3: Install FFmpeg**
+```bash
+brew install ffmpeg
+```
+
+**✅ Verify FFmpeg:**
+```bash
+ffmpeg -version
+```
+
+## **Step 4: Install Python Packages**
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## **Step 5: Create Environment File**
+```bash
+touch .env
+```
+Add to `.env` file:
+```
+GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+DEBUG=True
+SECRET_KEY="your-secret-key-here"
+```
+
+## **Step 6: Setup Database**
+```bash
+python3 manage.py migrate
+```
+
+## **Step 7: Run Application**
+```bash
+python3 main.py
+```
+**✅ Open browser:** http://127.0.0.1:8000
+
+---
+
+## **🔑 Getting Gemini API Key**
+1. **Visit:** [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. **Sign in** with your Google account
+3. **Create** a new API key
+4. **Copy** the key to your `.env` file
+
+---
+
+## Package Recovery and Troubleshooting
+
+### If Python Packages Are Deleted or Corrupted
+
+#### Complete Package Reinstallation:
+```bash
+# Activate virtual environment
+source venv/bin/activate  # macOS/Linux
+# OR
+.\venv\Scripts\activate   # Windows
+
+# Uninstall all packages (if needed)
+pip freeze > installed_packages_backup.txt
+pip uninstall -r installed_packages_backup.txt -y
+
+# Reinstall from requirements
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Verify installation
+pip list
+```
+
+#### Individual Package Recovery:
+If specific packages are missing, reinstall them individually:
+
+```bash
+# Check what's missing
+python3 -c "import django; print('Django OK')"
+python3 -c "import whisper; print('Whisper OK')"
+python3 -c "import google.generativeai; print('Gemini OK')"
+python3 -c "import transformers; print('Transformers OK')"
+
+# Reinstall missing packages
+pip install django djangorestframework
+pip install openai-whisper
+pip install google-generativeai
+pip install transformers torch sentencepiece
+```
+
+### Common Installation Issues and Solutions
+
+#### Issue 1: FFmpeg Not Found
+**Error:** `ffmpeg not found in PATH`
+**Solution:**
+```bash
+# Check if FFmpeg is installed
+which ffmpeg
+ffmpeg -version
+
+# If not installed, install it:
+# macOS:
+brew install ffmpeg
+
+# Linux:
+sudo apt install ffmpeg
+
+# Windows: Download from https://ffmpeg.org/download.html
+```
+
+#### Issue 2: PyTorch Installation Problems
+**Error:** `Could not find a version that satisfies the requirement torch`
+**Solution:**
+```bash
+# Install PyTorch with specific index
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# For Apple Silicon Macs:
+pip install torch torchvision torchaudio
+```
+
+#### Issue 3: Permission Errors
+**Error:** `Permission denied` during installation
+**Solution:**
+```bash
+# Use --user flag
+pip install --user -r requirements.txt
+
+# Or fix permissions
+sudo chown -R $(whoami) /path/to/your/project
+```
+
+#### Issue 4: Virtual Environment Issues
+**Error:** Virtual environment not working
+**Solution:**
+```bash
+# Remove and recreate virtual environment
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### Issue 5: Import Errors After Installation
+**Error:** `ModuleNotFoundError` even after installation
+**Solution:**
+```bash
+# Verify you're in the correct virtual environment
+which python
+pip list
+
+# Reinstall problematic package
+pip uninstall [package-name]
+pip install [package-name]
+
+# Clear Python cache
+find . -name "*.pyc" -delete
+find . -name "__pycache__" -delete
+```
+
+### Verifying Installation
+
+Run this verification script to check all dependencies:
+
+```bash
+python3 -c "
+import sys
+print(f'Python version: {sys.version}')
+
+try:
+    import django
+    print(f'✅ Django {django.get_version()}')
+except ImportError:
+    print('❌ Django not installed')
+
+try:
+    import whisper
+    print('✅ OpenAI Whisper installed')
+except ImportError:
+    print('❌ OpenAI Whisper not installed')
+
+try:
+    import google.generativeai
+    print('✅ Google Generative AI installed')
+except ImportError:
+    print('❌ Google Generative AI not installed')
+
+try:
+    import transformers
+    print('✅ HuggingFace Transformers installed')
+except ImportError:
+    print('❌ HuggingFace Transformers not installed')
+
+try:
+    import torch
+    print('✅ PyTorch installed')
+except ImportError:
+    print('❌ PyTorch not installed')
+
+print('\\n🔍 Checking system dependencies...')
+import shutil
+if shutil.which('ffmpeg'):
+    print('✅ FFmpeg found in PATH')
+else:
+    print('❌ FFmpeg not found in PATH')
+"
+```
+
+### Package Version Requirements
+
+The application requires these minimum versions:
+
+```
+django>=4.2.0
+djangorestframework>=3.16.0
+openai-whisper>=20240930
+google-generativeai>=0.3.0
+transformers>=4.32.0
+torch>=2.0.0
+sentencepiece>=0.1.99
+python-dotenv>=1.0.0
+python-multipart>=0.0.6
+ffmpeg-python>=0.2.0
+```
+
+### Development Environment Setup
+
+For development work, install additional packages:
+
+```bash
+# Development dependencies
+pip install black flake8 pytest django-debug-toolbar
+
+# Optional: Jupyter for experimentation
+pip install jupyter notebook
+```
+
+## How to Run the Application
+
+## How to Run the Application
+
+### Prerequisites Check
+Before running, ensure:
+1. Virtual environment is activated: `source venv/bin/activate` (macOS/Linux) or `.\venv\Scripts\activate` (Windows)
+2. All packages are installed: `pip list` should show Django, Whisper, etc.
+3. FFmpeg is available: `ffmpeg -version` should work
+4. Environment variables are set: `.env` file exists with `GEMINI_API_KEY`
+5. Database is migrated: `python3 manage.py migrate`
+
+### Method 1: Using the Custom Entry Point (Recommended)
+Start the application with the custom initialization script:
+```bash
+python3 main.py
+```
+This script will:
+- Check for FFmpeg availability and configure paths automatically
+- Load the Whisper model for transcription
+- Initialize the Gemini AI processor with your API key
+- Load HuggingFace Transformers models for analysis
+- Start the Django development server
+
+### Method 2: Using Django Management Command
+Start the Django server directly:
+```bash
+python3 manage.py runserver
+```
+
+### Method 3: Using Different Port
+If port 8000 is occupied:
+```bash
+python3 manage.py runserver 8001
+# or
+python3 main.py --port 8001
+```
+
+### Method 4: Using VS Code Task
+If using VS Code, you can run the predefined task:
+1. Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Windows/Linux)
+2. Type "Tasks: Run Task"
+3. Select "Run Django Server"
+
+The server will be available at **http://127.0.0.1:8000** (or the specified port).
+
+### Startup Process Explanation
+When you run `python3 main.py`, you'll see output like:
+```
+Starting AI Video Transcriber...
+Step 0/3: Checking ffmpeg availability...
+✅ ffmpeg is working correctly!
+Step 1/3: Loading Whisper model...
+Step 2/3: Setting up Gemini AI...
+✅ Gemini API initialized successfully
+Step 3/3: Loading HuggingFace Transformers models...
+✅ All models loaded successfully
+Django version 5.2.4, using settings 'settings'
+Starting development server at http://127.0.0.1:8000/
+```
+
+### Troubleshooting Startup Issues
+
+#### Issue: "GEMINI_API_KEY not found"
+```bash
+# Check if .env file exists
+ls -la .env
+
+# Create .env file if missing
+echo 'GEMINI_API_KEY="YOUR_API_KEY_HERE"' > .env
+```
+
+#### Issue: "ffmpeg not found"
+```bash
+# Install FFmpeg
+brew install ffmpeg  # macOS
+sudo apt install ffmpeg  # Linux
+```
+
+#### Issue: "No module named 'django'"
+```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Reinstall packages
+pip install -r requirements.txt
+```
+
+#### Issue: Port already in use
+```bash
+# Kill process using port 8000
+lsof -ti:8000 | xargs kill -9
+
+# Or use different port
+python3 manage.py runserver 8001
+```
+
+### 2. Use the Web Interface
+Open your web browser and navigate to `http://127.0.0.1:8000`.
+
+- **Upload Video/Audio**: Use the form to upload a video or audio file.
+- **Transcription**: The backend will transcribe the audio using Whisper.
+- **Analysis**: The transcript will be analyzed by Gemini for a summary and by a Transformers model for sentiment analysis.
+- **View Results**: The results will be displayed on the page.
+
+## Current Project Structure
+
+```
+Video_Txt 5/                     # Root project directory
+│
+├── Django Project Core          # Main Django configuration files
+│   ├── manage.py               # Django management command interface
+│   ├── settings.py             # Django settings (database, apps, static files)
+│   ├── urls.py                 # Main URL routing configuration
+│   ├── wsgi.py                 # WSGI application for production deployment
+│   ├── asgi.py                 # ASGI application for async support
+│   └── main.py                 # Custom entry point with AI model initialization
+│
+├── app/                        # Django application package
+│   ├── __init__.py            # Python package marker
+│   ├── views.py               # HTTP request handlers and API endpoints
+│   │                          #   - upload_video(): Handles file uploads and processing
+│   │                          #   - health_check(): System status endpoint
+│   ├── models.py              # Database models using Django ORM
+│   │                          #   - Upload: File metadata and upload tracking
+│   │                          #   - Transcript: Transcription results and language info
+│   │                          #   - Analysis: AI analysis results storage
+│   ├── urls.py                # App-specific URL routing
+│   │                          #   - /upload-video/ → upload_video view
+│   │                          #   - /health/ → health_check view
+│   ├── transcriber.py         # Video/Audio transcription using OpenAI Whisper
+│   │                          #   - VideoTranscriber class
+│   │                          #   - FFmpeg auto-detection and configuration
+│   │                          #   - Multi-format support (MP4, AVI, MOV, MP3, WAV)
+│   ├── gemini.py              # Google Gemini AI integration
+│   │                          #   - GeminiProcessor class
+│   │                          #   - Grammar correction and text enhancement
+│   │                          #   - Summary generation and keyword extraction
+│   ├── text_analyzer.py       # HuggingFace Transformers analysis
+│   │                          #   - TextAnalyzer class
+│   │                          #   - Sentiment analysis (DistilBERT)
+│   │                          #   - Emotion analysis with confidence scores
+│   │                          #   - Content quality assessment
+│   └── migrations/            # Database migration files
+│       ├── __init__.py        # Package marker
+│       └── 0001_initial.py    # Initial database schema creation
+│
+├── Frontend Assets             # Static files served by Django
+│   ├── frontend/              # Source static files
+│   │   ├── index.html         # Reference frontend template
+│   │   ├── style.css          # Main application styling
+│   │   ├── script.js          # Frontend JavaScript logic
+│   │   ├── nav-styles.css     # Navigation component styles
+│   │   ├── transformers-styles.css # AI analysis components styling
+│   │   ├── visualizations.js  # Charts and data visualization
+│   │   ├── scroll-indicator.js # Page scroll tracking
+│   │   └── section-history.js # Navigation history management
+│   └── templates/             # Django templates (served by views)
+│       └── index.html         # Main application interface
+│
+├── Data Storage               # File and database storage
+│   ├── media/                 # User-uploaded content (managed by Django)
+│   │   └── uploads/          # Video/audio files with database records
+│   ├── uploads/              # Legacy upload directory
+│   ├── outputs/              # Processed results, SRT files, transcripts
+│   └── db.sqlite3            # SQLite database (development)
+│
+├── Configuration & Documentation
+│   ├── .env                  # Environment variables (API keys, settings)
+│   ├── requirements.txt      # Python package dependencies
+│   ├── installed_packages.txt # Currently installed package versions
+│   ├── package-lock.json     # Node.js project metadata
+│   ├── docs.txt             # Comprehensive technical documentation
+│   ├── README.md            # Project overview and quick start guide
+│   └── test_emotion.py      # Emotion analysis testing and debugging
+│
+├── Development Environment   # Development tools and cache
+│   ├── .vscode/             # VS Code editor configuration
+│   │   └── tasks.json       # Predefined tasks (Run Django Server)
+│   ├── venv/                # Python virtual environment (if using venv)
+│   ├── venv311/             # Python 3.11 specific virtual environment
+│   └── __pycache__/         # Python bytecode cache files
+│       ├── settings.cpython-313.pyc
+│       ├── urls.cpython-313.pyc
+│       └── wsgi.cpython-313.pyc
+```
+
+### Key Files Explained
+
+#### Core Django Files
+- **`settings.py`**: Central configuration defining:
+  - Installed apps (`django.contrib.*`, `rest_framework`, `app`)
+  - Database configuration (SQLite for development)
+  - Static files settings (`STATIC_URL`, `STATICFILES_DIRS`)
+  - Media files settings (`MEDIA_URL`, `MEDIA_ROOT`)
+  - Security settings and middleware
+
+- **`urls.py`**: Main URL routing that:
+  - Serves the home page via `render(request, 'index.html')`
+  - Includes app URLs with `include('app.urls')`
+  - Serves media files during development
+
+- **`main.py`**: Custom application entry point that:
+  - Loads environment variables from `.env`
+  - Initializes AI models (Whisper, Gemini, Transformers)
+  - Performs system checks (FFmpeg availability)
+  - Starts Django development server
+
+#### Application Logic
+- **`app/views.py`**: Core request processing:
+  - `upload_video()`: Handles file uploads, transcription, analysis
+  - Database operations using Django ORM
+  - JSON API responses with structured data
+
+- **`app/models.py`**: Data persistence layer:
+  - File metadata tracking
+  - Transcription results storage
+  - Analysis results with JSON fields
+
+#### AI Processing Components
+- **`app/transcriber.py`**: Audio/video processing:
+  - Whisper model integration
+  - FFmpeg path detection and configuration
+  - Multi-format file support
+  - Error handling and logging
+
+- **`app/gemini.py`**: Text enhancement:
+  - API key management
+  - Grammar correction with randomness control
+  - Content summarization
+  - Keyword extraction
+
+- **`app/text_analyzer.py`**: Advanced NLP:
+  - Sentiment classification
+  - Emotion detection with confidence scores
+  - Content quality metrics
+  - Performance optimization for different hardware
