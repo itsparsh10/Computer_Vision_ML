@@ -1,0 +1,433 @@
+{% load static %}
+{% load static %}
+<!DOCTYPE html>
+
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎥 AI Video Transcriber</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link rel="stylesheet" href="{% static 'transformers-styles.css' %}">
+    <link rel="stylesheet" href="{% static 'nav-styles.css' %}">
+    <link rel="stylesheet" href="{% static 'coach-styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css' %}">
+</head>
+<body>
+    <div class="app-wrapper">
+        <nav class="sidebar">
+            <div class="logo-container">
+                <div class="logo">
+                    <i class="fas fa-film"></i>
+                </div>
+                <h1>AI Video Transcriber</h1>
+            </div>
+            <ul class="nav-links">
+                <li class="active"><a href="#uploadSection"><i class="fas fa-home"></i> Home</a></li>
+                <li class="nav-dropdown">
+                    <a href="#textAnalysisSection" class="dropdown-toggle">
+                        <i class="fas fa-file-text"></i> Text Analysis
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#transcriptSection"><i class="fas fa-file-alt"></i> Transcript</a></li>
+                        <li><a href="#summarySection"><i class="fas fa-compress-alt"></i> Summary</a></li>
+                        <li><a href="#sentimentSection"><i class="fas fa-heart"></i> Sentiment</a></li>
+                        <li><a href="#wordsAnalysisSection"><i class="fas fa-sync-alt"></i> Word Analysis</a></li>
+                        <li><a href="#enhancedAnalysisSection"><i class="fas fa-chart-bar"></i> Content Analysis</a></li>
+                    </ul>
+                </li>
+                <li><a href="#poseVoiceAnalysisSection"><i class="fas fa-user-check"></i> Pose & Voice Analysis</a></li>
+                <li><a href="#presentationCoachSection"><i class="fas fa-chalkboard-teacher"></i> Presentation Coach</a></li>
+                <!-- <li><a href="#"><i class="fas fa-history"></i> History</a></li> -->
+            </ul>
+            <div class="sidebar-footer">
+                <p>Powered by OpenAI Whisper + Google Gemini API + HuggingFace Transformers</p>
+            </div>
+        </nav>
+        
+        <div class="main-content">
+            <header class="app-header">
+                <div class="header-content">
+                    <h1>Video Analysis Dashboard</h1>
+                    <p>Transform your videos into actionable insights with advanced AI analysis</p>
+                </div>
+            </header>
+
+            <div id="uploadSection" class="upload-container">
+                <div class="upload-section">
+                    <div class="upload-header">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h2>Upload Your Media</h2>
+                    </div>
+                    <p class="upload-description">Select a video or audio file to analyze with our advanced AI tools</p>
+                    <form id="uploadForm" enctype="multipart/form-data">{% csrf_token %}{% csrf_token %}
+                        <div class="file-input-wrapper">
+                            <input type="file" id="videoFile" name="file" accept=".mp4,.avi,.mov,.mkv,.mp3,.wav,.m4a" required>
+                            <label for="videoFile" class="file-label">
+                                <span class="file-icon"><i class="fas fa-file-video"></i></span>
+                                <span class="file-text">Choose Video/Audio File</span>
+                            </label>
+                        </div>
+                        
+                        <div class="upload-options">
+                            <div class="format-options">
+                                <span class="format-badge">MP4</span>
+                                <span class="format-badge">AVI</span>
+                                <span class="format-badge">MOV</span>
+                                <span class="format-badge">MP3</span>
+                                <span class="format-badge">WAV</span>
+                            </div>
+                        </div>
+                                        
+                        <button type="submit" id="uploadBtn" class="upload-btn">
+                            <i class="fas fa-rocket"></i>
+                            <span class="btn-text">Transcribe & Analyze</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="loadingSection" class="loading-section" style="display: none;">
+                <div class="loading-content">
+                    <div class="spinner-container">
+                        <div class="spinner"></div>
+                    </div>
+                    <h3>Processing Your Media</h3>
+                    <p>Our AI systems are analyzing your content. This may take a few minutes depending on the file length.</p>
+                    <div class="processing-steps">
+                        <div class="step active"><i class="fas fa-check-circle"></i> Uploading</div>
+                        <div class="step active"><i class="fas fa-spinner fa-spin"></i> Transcribing</div>
+                        <div class="step"><i class="fas fa-circle"></i> Analyzing</div>
+                        <div class="step"><i class="fas fa-circle"></i> Generating Insights</div>
+                    </div>
+                </div>
+            </div>
+
+        <div id="resultsSection" class="results-section" style="display: none;">
+            <div class="results-header">
+                <h2><i class="fas fa-chart-line"></i> Analysis Results</h2>
+                <div class="results-actions">
+                    <button class="action-btn" title="Download Report"><i class="fas fa-download"></i></button>
+                    <button class="action-btn" title="Print Results"><i class="fas fa-print"></i></button>
+                    <button class="action-btn" title="Share Results"><i class="fas fa-share-alt"></i></button>
+                </div>
+            </div>
+            
+            <div class="section-navigation">
+                <button class="section-nav-btn" data-scroll-to="transcriptSection">
+                    <i class="fas fa-file-alt"></i> Transcript
+                </button>
+                <button class="section-nav-btn" data-scroll-to="summarySection">
+                    <i class="fas fa-compress-alt"></i> Summary
+                </button>
+                <button class="section-nav-btn" data-scroll-to="sentimentSection">
+                    <i class="fas fa-heart"></i> Sentiment
+                </button>
+                <button class="section-nav-btn" data-scroll-to="wordsAnalysisSection">
+                    <i class="fas fa-sync-alt"></i> Word Analysis
+                </button>
+                <button class="section-nav-btn" data-scroll-to="enhancedAnalysisSection">
+                    <i class="fas fa-chart-bar"></i> Content Analysis
+                </button>
+                <button class="section-nav-btn" data-scroll-to="presentationCoachSection">
+                    <i class="fas fa-chalkboard-teacher"></i> Coach Feedback
+                </button>
+            </div>
+            
+            <div class="results-overview">
+                <div class="overview-card file-info-card">
+                    <div class="overview-icon">
+                        <i class="fas fa-file-video"></i>
+                    </div>
+                    <div class="overview-content">
+                        <h4>File Information</h4>
+                        <div id="fileInfo" class="file-details"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="results-grid">
+                <!-- Main sections in vertical layout -->
+                <div id="transcriptSection" class="result-card transcript-card section-anchor">
+                    <div class="card-header">
+                        <h3><i class="fas fa-microphone"></i> Original Transcript</h3>
+                        <div class="card-controls">
+                            <button class="control-btn" title="Copy Text"><i class="fas fa-copy"></i></button>
+                            <button class="control-btn" title="Expand"><i class="fas fa-expand"></i></button>
+                            <div class="section-jump">
+                                <button class="jump-btn" data-scroll-to="summarySection" title="Jump to Summary"><i class="fas fa-arrow-down"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="originalTranscript" class="transcript-box"></div>
+                </div>
+
+                <div class="result-card grammar-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-spell-check"></i> Grammar Corrected</h3>
+                        <div class="card-controls">
+                            <button class="control-btn" title="Copy Text"><i class="fas fa-copy"></i></button>
+                            <button class="control-btn" title="Expand"><i class="fas fa-expand"></i></button>
+                        </div>
+                    </div>
+                    <div id="correctedTranscript" class="transcript-box"></div>
+                </div>
+
+                <div class="result-card keywords-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-tags"></i> Keywords</h3>
+                    </div>
+                    <div id="keywords" class="keywords-box"></div>
+                </div>
+
+                <div id="summarySection" class="result-card summary-card section-anchor">
+                    <div class="card-header">
+                        <h3><i class="fas fa-compress-alt"></i> Summary</h3>
+                        <div class="card-controls">
+                            <div class="card-badge">AI Generated</div>
+                            <div class="section-jump">
+                                <button class="jump-btn" data-scroll-to="transcriptSection" title="Jump to Transcript"><i class="fas fa-arrow-up"></i></button>
+                                <button class="jump-btn" data-scroll-to="sentimentSection" title="Jump to Sentiment Analysis"><i class="fas fa-arrow-down"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="summary" class="summary-box"></div>
+                </div>
+                
+                <div id="sentimentSection" class="result-card sentiment-card section-anchor">
+                    <div class="card-header">
+                        <h3><i class="fas fa-heart"></i> Sentiment Analysis</h3>
+                        <div class="card-controls">
+                            <div class="card-badge ai-badge">NLP</div>
+                            <div class="section-jump">
+                                <button class="jump-btn" data-scroll-to="summarySection" title="Jump to Summary"><i class="fas fa-arrow-up"></i></button>
+                                <button class="jump-btn" data-scroll-to="wordsAnalysisSection" title="Jump to Word Analysis"><i class="fas fa-arrow-down"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="card-description">Analysis of the emotional tone of your content.</p>
+                    <div id="sentimentAnalysis" class="analysis-box"></div>
+                </div>
+                
+                <div class="result-card emotion-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-heart"></i> Emotion Analysis</h3>
+                        <div class="card-badge emotion-badge">Extended Categories</div>
+                    </div>
+                    <p class="card-description">Detailed emotion categorization based on NLP & Social Media Models.</p>
+                    <div id="emotionAnalysis" class="analysis-box"></div>
+                </div>
+                
+                <div class="result-card quality-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-star"></i> Content Quality</h3>
+                        <div class="card-badge ai-badge">NLP</div>
+                    </div>
+                    <p class="card-description">Evaluation of your content's overall quality.</p>
+                    <div id="contentAssessment" class="analysis-box"></div>
+                </div>
+            </div>
+            
+            <div id="wordsAnalysisSection" class="result-card words-analysis section-anchor">
+                <div class="card-header">
+                    <h3><i class="fas fa-sync-alt"></i> Repeated Words Analysis</h3>
+                    <div class="card-controls">
+                        <div class="card-badge">Improvement</div>
+                        <div class="section-jump">
+                            <button class="jump-btn" data-scroll-to="sentimentSection" title="Jump to Sentiment Analysis"><i class="fas fa-arrow-up"></i></button>
+                            <button class="jump-btn" data-scroll-to="enhancedAnalysisSection" title="Jump to Content Analysis"><i class="fas fa-arrow-down"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <p class="card-description">Words that appear frequently in your speech. Variety in vocabulary can make your message more engaging.</p>
+                <div id="repeatedWords" class="word-analysis-box"></div>
+            </div>
+            
+            <div class="result-card filler-analysis">
+                <div class="card-header">
+                    <h3><i class="fas fa-comment-dots"></i> Filler Words Detection</h3>
+                    <div class="card-badge">Improvement</div>
+                </div>
+                <p class="card-description">Words that may reduce the clarity and impact of your message. Minimizing these can improve your delivery.</p>
+                <div id="fillerWords" class="word-analysis-box"></div>
+            </div>
+        
+            <div id="enhancedAnalysisSection" class="enhanced-analysis-container section-anchor">
+                <div class="enhanced-analysis-header">
+                    <div class="header-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="header-content">
+                        <h3>Advanced Content Analysis & Recommendations</h3>
+                        <p>Comprehensive analysis with detailed recommendations based on NLP metrics</p>
+                    </div>
+                    <div class="header-controls">
+                        <div class="header-badge">
+                            <span>AI Powered</span>
+                        </div>
+                        <div class="section-jump">
+                            <button class="jump-btn jump-btn-light" data-scroll-to="wordsAnalysisSection" title="Jump to Word Analysis"><i class="fas fa-arrow-up"></i></button>
+                            <button class="jump-btn jump-btn-light" data-scroll-to="poseVoiceAnalysisSection" title="Jump to Pose & Voice Analysis"><i class="fas fa-arrow-down"></i></button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="strengthsImprovements" class="enhanced-analysis-content"></div>
+                
+                <div class="analysis-note">
+                    <i class="fas fa-info-circle"></i>
+                    <p><strong>Note:</strong> Scores are calculated using advanced NLP algorithms considering vocabulary diversity, sentence structure, content length, and flow quality. Higher percentages indicate better performance in each area.</p>
+                </div>
+            </div>
+
+            <div id="poseVoiceAnalysisSection" class="pose-voice-analysis-container section-anchor">
+                <div class="pose-voice-analysis-header">
+                    <div class="header-icon">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="header-content">
+                        <h3>Pose & Voice Analysis</h3>
+                        <p>Advanced body language and voice analysis using MediaPipe and audio processing</p>
+                    </div>
+                    <div class="header-controls">
+                        <div class="header-badge">
+                            <span>Computer Vision</span>
+                        </div>
+                        <div class="section-jump">
+                            <button class="jump-btn jump-btn-light" data-scroll-to="enhancedAnalysisSection" title="Jump to Content Analysis"><i class="fas fa-arrow-up"></i></button>
+                            <button class="jump-btn jump-btn-light" data-scroll-to="uploadSection" title="Back to Top"><i class="fas fa-home"></i></button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pose-voice-grid">
+                    <div class="pose-analysis-card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-user"></i></h4>
+                            <div class="card-badge">MediaPipe</div>
+                        </div>
+                        <div id="poseAnalysis" class="pose-analysis-content">
+                            <div class="analysis-placeholder">
+                                <i class="fas fa-user-check"></i>
+                                <p>Upload a video to analyze body language, facial expressions, and movement patterns.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="voice-analysis-card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-microphone"></i> Voice Analysis</h4>
+                            <div class="card-badge">Audio Processing</div>
+                        </div>
+                        <div id="voiceAnalysis" class="voice-analysis-content">
+                            <div class="analysis-placeholder">
+                                <i class="fas fa-microphone-alt"></i>
+                                <p>Voice characteristics including pitch, volume, and speaking patterns will be analyzed.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="analysis-note">
+                    <i class="fas fa-info-circle"></i>
+                    <p><strong>Note:</strong> This analysis uses MediaPipe for pose detection and facial analysis, along with advanced audio processing to evaluate your presentation skills.</p>
+                </div>
+            </div>
+
+            <!-- Presentation Coach Feedback Section -->
+            <div id="presentationCoachSection" class="presentation-coach-container section-anchor">
+                <div class="presentation-coach-header">
+                    <div class="header-content">
+                        <!-- <h3>Presentation Coach</h3> -->
+                    </div>
+                    <div class="header-controls">
+                        <div class="section-jump">
+                            <button class="jump-btn jump-btn-light" data-scroll-to="poseVoiceAnalysisSection" title="Jump to Pose & Voice Analysis"><i class="fas fa-arrow-up"></i></button>
+                            <button class="jump-btn jump-btn-light" data-scroll-to="uploadSection" title="Back to Top"><i class="fas fa-home"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="coach-feedback-content">
+                    <div class="coach-card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-chart-line"></i> Summary</h4>
+                            <div class="card-badge">Overall Assessment</div>
+                        </div>
+                        <div id="coachSummary">
+                            <div class="analysis-placeholder">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Analyzing presentation skills...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="coach-card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-search"></i> Body Analysis</h4>
+                            <div class="card-badge">Data Analysis</div>
+                        </div>
+                        <div id="coachInterpretation">
+                            <div class="analysis-placeholder">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Interpreting body language and vocal data...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="coach-card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-microphone"></i> Voice Analysis</h4>
+                            <div class="card-badge">Voice Data</div>
+                        </div>
+                        <div id="coachVoiceAnalysis">
+                            <div class="analysis-placeholder">
+                                <i class="fas fa-microphone-alt"></i>
+                                <p>Analyzing vocal delivery data...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="coach-card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-lightbulb"></i> Suggestions</h4>
+                            <div class="card-badge">Improvement</div>
+                        </div>
+                        <div id="coachSuggestions">
+                            <div class="analysis-placeholder">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Generating personalized suggestions...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="analysis-note">
+                    <i class="fas fa-info-circle"></i>
+                    <p><strong>Note:</strong> This analysis combines video data from MediaPipe pose detection with audio analysis to provide comprehensive presentation coaching.</p>
+                </div>
+            </div>
+
+            <div id="errorSection" class="error-section" style="display: none;">
+                <div class="error-container">
+                    <div class="error-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3>An Error Occurred</h3>
+                    <div id="errorMessage"></div>
+                    <button class="retry-btn"><i class="fas fa-redo"></i> Try Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="scrollToTopBtn" class="scroll-to-top-btn" role="button" tabindex="0" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="{% static 'visualizations.js' %}"></script>
+    <script src="{% static 'script.js' %}"></script>
+    <script src="{% static 'scroll-indicator.js' %}"></script>
+    <script src="{% static 'section-history.js' %}"></script>
+</body>
+</html>
